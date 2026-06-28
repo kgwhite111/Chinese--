@@ -1,5 +1,5 @@
-// tts-proxy.js - Netlify Function for Kyrgyz TTS
-const fetch = require('node-fetch');
+// tts-proxy.js - Netlify Function for Kyrgyz TTS using Edge TTS
+const { WebSocket } = require('ws');
 
 exports.handler = async (event, context) => {
   const text = event.queryStringParameters?.text || '';
@@ -12,47 +12,67 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Use Microsoft Edge TTS via HTTP (public endpoint)
-    const encodedText = encodeURIComponent(text);
-    
-    // Alternative: Use a free TTS service
-    // VoiceRSS free tier (350 requests/day)
-    // Or use Google Translate TTS
-    
-    // For Kyrgyz, we'll use a workaround with Google Translate's TTS
-    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodedText}&tl=ky`;
-    
-    const response = await fetch(ttsUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`TTS request failed: ${response.status}`);
-    }
-    
-    const audioBuffer = await response.buffer();
+    // Use Edge TTS via WebSocket on the server side
+    const result = await synthesizeKyrgyzSpeech(text);
     
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
+        'Content-Disposition': 'inline',
         'Cache-Control': 'public, max-age=3600'
       },
-      body: audioBuffer.toString('base64'),
+      body: result.toString('base64'),
       isBase64Encoded: true
     };
   } catch (error) {
     console.error('TTS Error:', error);
-    
-    // Fallback: Return a helpful message
     return {
       statusCode: 500,
-      body: JSON.stringify({ 
-        error: 'TTS service temporarily unavailable',
-        suggestion: '柯尔克孜语朗读服务暂时不可用，请稍后再试'
-      })
+      body: JSON.stringify({ error: 'TTS service unavailable' })
     };
   }
 };
+
+// Server-side WebSocket to Edge TTS
+function synthesizeKyrgyzSpeech(text) {
+  return new Promise((resolve, reject) => {
+    const wsUrl = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+    const ws = new WebSocket(wsUrl);
+    
+    const audioChunks = [];
+    
+    ws.on('open', () => {
+      // Send speech config
+      ws.send(`X-Timestamp:${new Date().toISOString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+      
+      // Send SSML
+      const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ky-KG'><voice name='Microsoft Server Speech Text to Speech Voice (ky-KG, AigulNeural)'>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice></speak>`;
+      ws.send(`X-RequestId:${createUUID()}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`);
+    });
+    
+    ws.on('message', (data) => {
+      if (typeof data === 'string') {
+        if (data.includes('Path:turn.end')) {
+          ws.close();
+        }
+      } else {
+        audioChunks.push(data);
+      }
+    });
+    
+    ws.on('error', reject);
+    ws.on('close', () => {
+      if (audioChunks.length > 0) {
+        const buffer = Buffer.concat(audioChunks);
+        resolve(buffer);
+      } else {
+        reject(new Error('No audio data received'));
+      }
+    });
+  });
+}
+
+function createUUID() {
+  return 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
+}
