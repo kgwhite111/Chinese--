@@ -337,23 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.speechSynthesis.speak(utterance);
         } else {
-            // 柯尔克孜语朗读 - 多级后备方案
+            // 柯尔克孜语朗读 - 直接使用后备方案
             showToast('正在为您朗读柯尔克孜语...', 'success');
-            
-            // 方案1：尝试通过 Netlify Function
-            const encodedText = encodeURIComponent(text);
-            fetch(`/.netlify/functions/tts-proxy?text=${encodedText}`)
-                .then(response => response.json())
-                .then(data => {
-                    // 如果函数返回需要使用后备
-                    if (data.suggestion === 'Please use browser fallback TTS') {
-                        fallbackTTS(text);
-                    }
-                })
-                .catch(err => {
-                    console.log('[TTS] 使用后备方案');
-                    fallbackTTS(text);
-                });
+            fallbackTTS(text);
         }
     }
     
