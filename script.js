@@ -51,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         
-        // 动态添加小图标
         let icon = 'ℹ️';
         if (type === 'success') icon = '✅';
         if (type === 'error') icon = '❌';
@@ -59,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
         toastContainer.appendChild(toast);
         
-        // 4秒后自动移除 DOM
         setTimeout(() => {
             toast.remove();
         }, 4000);
@@ -90,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 去掉 Base URL 的末尾斜杠，保证拼接规范
         if (baseUrl.endsWith('/')) {
             baseUrl = baseUrl.slice(0, -1);
         }
@@ -113,12 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsDrawer.classList.remove('open');
     }
 
-    // 切换密码可见性
     toggleKeyVisibilityBtn.addEventListener('click', () => {
         const type = settingApiKey.getAttribute('type') === 'password' ? 'text' : 'password';
         settingApiKey.setAttribute('type', type);
         
-        // 动态切换眼睛图标
         const svg = toggleKeyVisibilityBtn.querySelector('svg');
         if (type === 'text') {
             svg.innerHTML = `
@@ -133,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 绑定抽屉开关事件
     settingsBtn.addEventListener('click', openDrawer);
     closeDrawerBtn.addEventListener('click', closeDrawer);
     drawerOverlay.addEventListener('click', closeDrawer);
@@ -148,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 读取本地 API 配置
         const baseUrl = localStorage.getItem('translator_base_url') || 'https://api.deepseek.com/v1';
         const apiKey = localStorage.getItem('translator_api_key') || '';
         const model = localStorage.getItem('translator_model') || 'deepseek-chat';
@@ -159,12 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 进入加载状态
         setTranslateLoadingState(true);
         targetText.value = '正在翻译中，请稍候...';
 
         try {
-            // 源语言与目标语言文本标签
             const sourceLabel = currentSourceLang === 'zh' ? '中文' : '柯尔克孜语（Kyrgyz/Кыргызча）';
             const targetLabel = currentTargetLang === 'zh' ? '中文' : '柯尔克孜语（Kyrgyz/Кыргызча）';
 
@@ -225,14 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     translateBtn.addEventListener('click', handleTranslate);
 
-    // --- 语言方向切换与文本框清空 ---
+    // --- 语言方向切换 ---
     function swapLanguage() {
-        // 交换状态
         const tempLang = currentSourceLang;
         currentSourceLang = currentTargetLang;
         currentTargetLang = tempLang;
 
-        // 更新界面标签
         if (currentSourceLang === 'zh') {
             sourceLangLabel.textContent = '中文';
             targetLangLabel.textContent = '柯尔克孜语';
@@ -245,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
             targetText.placeholder = '翻译结果将显示在这里...';
         }
 
-        // 清空文本框
         sourceText.value = '';
         targetText.value = '';
         charCount.textContent = '0';
@@ -254,14 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     swapLangBtn.addEventListener('click', swapLanguage);
 
-    // 清空源语言文本
     clearTextBtn.addEventListener('click', () => {
         sourceText.value = '';
         charCount.textContent = '0';
         sourceText.focus();
     });
 
-    // 字符数实时统计
     sourceText.addEventListener('input', () => {
         const count = sourceText.value.length;
         charCount.textContent = count;
@@ -271,15 +257,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 语音录入 (Web Audio API) ---
-    // 为特定卡片绑定录音事件 (source 或 target)
+    // --- 语音录入 ---
     async function toggleRecording(type) {
         const isSource = type === 'source';
         const recordBtn = isSource ? sourceRecordBtn : targetRecordBtn;
         const isRecording = recordBtn.classList.contains('recording');
 
         if (!isRecording) {
-            // 启动录音
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mediaRecorder = new MediaRecorder(stream);
@@ -291,36 +275,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 mediaRecorder.addEventListener('stop', () => {
                     const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-                    console.log(`[语音录制成功，等待接入 Whisper 接口] Blob 大小: ${(audioBlob.size / 1024).toFixed(2)} KB, MIME: ${audioBlob.type}`);
-                    showToast('录音成功！本地已生成音频数据（详情见控制台）。未来可接入 OpenAI Whisper 或 Netlify 函数进行后端转写。', 'success');
-                    
-                    // 释放麦克风权限
+                    console.log(`[语音录制成功] Blob 大小: ${(audioBlob.size / 1024).toFixed(2)} KB`);
+                    showToast('录音成功！可接入 Whisper 进行转写。', 'success');
                     stream.getTracks().forEach(track => track.stop());
                 });
 
-                // 保持引用以便停止
                 if (isSource) {
                     mediaRecorderSource = mediaRecorder;
-                    audioChunksSource = chunks;
                     streamSource = stream;
                 } else {
                     mediaRecorderTarget = mediaRecorder;
-                    audioChunksTarget = chunks;
                     streamTarget = stream;
                 }
 
-                // 启动录音并更改样式
                 mediaRecorder.start();
                 recordBtn.classList.add('recording');
                 recordBtn.querySelector('.btn-text').textContent = '⏹ 停止录音';
-                showToast('正在录音中，请对准麦克风说话...', 'info');
+                showToast('正在录音中...', 'info');
 
             } catch (err) {
                 console.error('获取麦克风失败:', err);
-                showToast('获取麦克风权限失败，请检查浏览器权限设置！', 'error');
+                showToast('获取麦克风权限失败', 'error');
             }
         } else {
-            // 停止录音
             if (isSource && mediaRecorderSource) {
                 mediaRecorderSource.stop();
                 mediaRecorderSource = null;
@@ -336,72 +313,21 @@ document.addEventListener('DOMContentLoaded', () => {
     sourceRecordBtn.addEventListener('click', () => toggleRecording('source'));
     targetRecordBtn.addEventListener('click', () => toggleRecording('target'));
 
-    // --- 柯尔克孜语 Edge TTS 直接实现 ---
-    async function edgeTTSKyrgyz(text) {
-        const trustedClientToken = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
-        const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?trustedclienttoken=${trustedClientToken}&sec-ch-plt=mozilla&sec-ch-ua=%22Chromium%22%3Bv%3D%22114%22%2C%22Google%20Chrome%22%3Bv%3D%22114%22%2C%22Not)A%3DBrand%22%3Bv%3D%2224%22&sec-ch-ua-mobile=?0&sec-ch-ua-platform=%22Windows%22&user-agent=Mozilla/5.0%20(Windows%20NT%2010.0%3B%20Win64%3B%20x64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F114.0.0.0%20Safari%2F537.36';
-        
-        return new Promise((resolve, reject) => {
-            const ws = new WebSocket(wsUrl);
-            const audioChunks = [];
-            
-            ws.onopen = () => {
-                const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='ky-KG'><voice name='Microsoft Server Speech Text to Speech Voice (ky-KG, AigulNeural)'>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice></speak>`;
-                ws.send(`X-Timestamp:${new Date().toISOString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
-                ws.send(`X-RequestId:${'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16))}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`);
-            };
-            
-            ws.onmessage = (event) => {
-                if (typeof event.data === 'string') {
-                    if (event.data.includes('Path:turn.end')) {
-                        ws.close();
-                    }
-                } else {
-                    audioChunks.push(event.data);
-                }
-            };
-            
-            ws.onerror = (err) => {
-                console.error('[Edge TTS WebSocket 错误]', err);
-                reject(err);
-            };
-            
-            ws.onclose = () => {
-                if (audioChunks.length > 0) {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    audio.onended = () => {
-                        URL.revokeObjectURL(audioUrl);
-                        resolve();
-                    };
-                    audio.onerror = reject;
-                    audio.play();
-                } else {
-                    reject(new Error('没有音频数据'));
-                }
-            };
-        });
-    }
-
-    // --- 文本朗读 (Web Speech API + Edge TTS) ---
+    // --- 文本朗读 ---
     function speakText(text, lang) {
         if (!text) {
             showToast('没有可供朗读的文本', 'error');
             return;
         }
 
-        // 如果浏览器正在朗读，先停止
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
         }
 
         if (lang === 'zh') {
-            // 中文朗读：使用 Web Speech API 原生支持
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-CN';
             
-            // 挑选精细的中文字体声音（女声优先）
             const voices = window.speechSynthesis.getVoices();
             const zhVoice = voices.find(v => v.lang.includes('zh-CN') || v.lang.includes('zh_CN'));
             if (zhVoice) utterance.voice = zhVoice;
@@ -411,14 +337,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.speechSynthesis.speak(utterance);
         } else {
-            // 柯尔克孜语朗读：使用 Edge TTS
+            // 柯尔克孜语朗读
             showToast('正在为您朗读柯尔克孜语...', 'success');
-            edgeTTSKyrgyz(text).then(() => {
-                console.log('[Edge TTS] 柯尔克孜语朗读完成');
-            }).catch(err => {
-                console.error('[Edge TTS 错误]', err);
-                showToast('朗读失败，请检查网络连接', 'error');
-            });
+            
+            // 尝试通过 Netlify Function 获取 TTS 音频
+            const encodedText = encodeURIComponent(text);
+            const proxyUrl = `/.netlify/functions/tts-proxy?text=${encodedText}`;
+            
+            fetch(proxyUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('代理请求失败');
+                    }
+                    return response.blob();
+                })
+                .then(audioBlob => {
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        console.log('[TTS] 柯尔克孜语朗读完成');
+                    };
+                    audio.onerror = (err) => {
+                        console.error('[音频播放错误]', err);
+                        // 后备：使用 Web Speech API
+                        fallbackTTS(text);
+                    };
+                    audio.play();
+                })
+                .catch(err => {
+                    console.error('[柯尔克孜语 TTS 错误]', err);
+                    // 后备方案
+                    fallbackTTS(text);
+                });
+        }
+    }
+    
+    // 后备 TTS 方案
+    function fallbackTTS(text) {
+        const voices = window.speechSynthesis.getVoices();
+        const kyVoice = voices.find(v => v.lang.includes('ky'));
+        
+        if (kyVoice) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ky-KG';
+            utterance.voice = kyVoice;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            showToast('柯尔克孜语朗读需要 Netlify Functions 支持，请确保已部署完整项目', 'info');
         }
     }
 
@@ -432,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         speakText(text, currentTargetLang);
     });
 
-    // 修复某些浏览器上 getVoices 异步加载问题
+    // 加载语音列表
     if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => {};
     }

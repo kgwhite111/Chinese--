@@ -1,0 +1,8 @@
+{
+  "name": "chinese-kyrgyz-translator",
+  "version": "1.0.0",
+  "description": "中文 ↔ 柯尔克孜语智能翻译",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
