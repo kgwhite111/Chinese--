@@ -336,6 +336,54 @@ document.addEventListener('DOMContentLoaded', () => {
     sourceRecordBtn.addEventListener('click', () => toggleRecording('source'));
     targetRecordBtn.addEventListener('click', () => toggleRecording('target'));
 
+    // --- 柯尔克孜语 Edge TTS 直接实现 ---
+    async function edgeTTSKyrgyz(text) {
+        const trustedClientToken = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+        const wsUrl = `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?trustedclienttoken=${trustedClientToken}&sec-ch-plt=mozilla&sec-ch-ua=%22Chromium%22%3Bv%3D%22114%22%2C%22Google%20Chrome%22%3Bv%3D%22114%22%2C%22Not)A%3DBrand%22%3Bv%3D%2224%22&sec-ch-ua-mobile=?0&sec-ch-ua-platform=%22Windows%22&user-agent=Mozilla/5.0%20(Windows%20NT%2010.0%3B%20Win64%3B%20x64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F114.0.0.0%20Safari%2F537.36';
+        
+        return new Promise((resolve, reject) => {
+            const ws = new WebSocket(wsUrl);
+            const audioChunks = [];
+            
+            ws.onopen = () => {
+                const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xmlns:mstts='http://www.w3.org/2001/mstts' xml:lang='ky-KG'><voice name='Microsoft Server Speech Text to Speech Voice (ky-KG, AigulNeural)'>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice></speak>`;
+                ws.send(`X-Timestamp:${new Date().toISOString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+                ws.send(`X-RequestId:${'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16))}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`);
+            };
+            
+            ws.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    if (event.data.includes('Path:turn.end')) {
+                        ws.close();
+                    }
+                } else {
+                    audioChunks.push(event.data);
+                }
+            };
+            
+            ws.onerror = (err) => {
+                console.error('[Edge TTS WebSocket 错误]', err);
+                reject(err);
+            };
+            
+            ws.onclose = () => {
+                if (audioChunks.length > 0) {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    audio.onerror = reject;
+                    audio.play();
+                } else {
+                    reject(new Error('没有音频数据'));
+                }
+            };
+        });
+    }
+
     // --- 文本朗读 (Web Speech API + Edge TTS) ---
     function speakText(text, lang) {
         if (!text) {
@@ -364,17 +412,13 @@ document.addEventListener('DOMContentLoaded', () => {
             window.speechSynthesis.speak(utterance);
         } else {
             // 柯尔克孜语朗读：使用 Edge TTS
-            if (typeof EdgeTTS !== 'undefined') {
-                EdgeTTS.speak(text, 'ky-KG', 'Microsoft-AigulNeural').then(() => {
-                    console.log('[Edge TTS] 柯尔克孜语朗读完成');
-                }).catch(err => {
-                    console.error('[Edge TTS 错误]', err);
-                    showToast('朗读失败，请检查网络连接', 'error');
-                });
-                showToast('正在为您朗读柯尔克孜语...', 'success');
-            } else {
-                showToast('柯尔克孜语朗读引擎加载中，请稍后再试', 'info');
-            }
+            showToast('正在为您朗读柯尔克孜语...', 'success');
+            edgeTTSKyrgyz(text).then(() => {
+                console.log('[Edge TTS] 柯尔克孜语朗读完成');
+            }).catch(err => {
+                console.error('[Edge TTS 错误]', err);
+                showToast('朗读失败，请检查网络连接', 'error');
+            });
         }
     }
 
