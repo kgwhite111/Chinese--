@@ -337,54 +337,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.speechSynthesis.speak(utterance);
         } else {
-            // 柯尔克孜语朗读
+            // 柯尔克孜语朗读 - 多级后备方案
             showToast('正在为您朗读柯尔克孜语...', 'success');
             
-            // 尝试通过 Netlify Function 获取 TTS 音频
+            // 方案1：尝试通过 Netlify Function
             const encodedText = encodeURIComponent(text);
-            const proxyUrl = `/.netlify/functions/tts-proxy?text=${encodedText}`;
-            
-            fetch(proxyUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('代理请求失败');
-                    }
-                    return response.blob();
-                })
-                .then(audioBlob => {
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    audio.onended = () => {
-                        URL.revokeObjectURL(audioUrl);
-                        console.log('[TTS] 柯尔克孜语朗读完成');
-                    };
-                    audio.onerror = (err) => {
-                        console.error('[音频播放错误]', err);
-                        // 后备：使用 Web Speech API
+            fetch(`/.netlify/functions/tts-proxy?text=${encodedText}`)
+                .then(response => response.json())
+                .then(data => {
+                    // 如果函数返回需要使用后备
+                    if (data.suggestion === 'Please use browser fallback TTS') {
                         fallbackTTS(text);
-                    };
-                    audio.play();
+                    }
                 })
                 .catch(err => {
-                    console.error('[柯尔克孜语 TTS 错误]', err);
-                    // 后备方案
+                    console.log('[TTS] 使用后备方案');
                     fallbackTTS(text);
                 });
         }
     }
     
-    // 后备 TTS 方案
+    // 后备 TTS 方案 - 只使用系统 Kyrgyz 语音
     function fallbackTTS(text) {
         const voices = window.speechSynthesis.getVoices();
-        const kyVoice = voices.find(v => v.lang.includes('ky'));
+        
+        // 尝试找 Kyrgyz 语音
+        let kyVoice = voices.find(v => 
+            v.lang.includes('ky') || 
+            v.lang.includes('Kyrgyz') ||
+            v.lang.includes('KG')
+        );
         
         if (kyVoice) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ky-KG';
             utterance.voice = kyVoice;
+            utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
+            showToast('正在使用系统 Kyrgyz 语音朗读...', 'success');
         } else {
-            showToast('柯尔克孜语朗读需要 Netlify Functions 支持，请确保已部署完整项目', 'info');
+            showToast('您的浏览器不支持柯尔克孜语语音朗读', 'info');
         }
     }
 
