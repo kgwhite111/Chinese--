@@ -365,8 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // 柯尔克孜语朗读：使用 Edge TTS
             if (typeof EdgeTTS !== 'undefined') {
-                const player = new EdgeTTS.EdgeTTSPlayer();
-                player.speak(text, 'ky-KG', 'Microsoft-AigulNeural').then(() => {
+                EdgeTTS.speak(text, 'ky-KG', 'Microsoft-AigulNeural').then(() => {
                     console.log('[Edge TTS] 柯尔克孜语朗读完成');
                 }).catch(err => {
                     console.error('[Edge TTS 错误]', err);
