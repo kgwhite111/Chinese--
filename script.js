@@ -337,33 +337,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.speechSynthesis.speak(utterance);
         } else {
-            // 柯尔克孜语朗读 - 直接使用后备方案
-            showToast('正在为您朗读柯尔克孜语...', 'success');
-            fallbackTTS(text);
+            // 柯尔克孜语朗读 - 使用微软 Edge TTS 直连
+            speakKyrgyzEdgeTTS(text);
         }
     }
     
-    // 后备 TTS 方案 - 只使用系统 Kyrgyz 语音
-    function fallbackTTS(text) {
-        const voices = window.speechSynthesis.getVoices();
+    // 微软 Edge TTS 直连 - 免费高质量柯尔克孜语语音
+    async function speakKyrgyzEdgeTTS(text) {
+        showToast('正在为您朗读柯尔克孜语...', 'success');
         
-        // 尝试找 Kyrgyz 语音
-        let kyVoice = voices.find(v => 
-            v.lang.includes('ky') || 
-            v.lang.includes('Kyrgyz') ||
-            v.lang.includes('KG')
-        );
-        
-        if (kyVoice) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ky-KG';
-            utterance.voice = kyVoice;
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
-            showToast('正在使用系统 Kyrgyz 语音朗读...', 'success');
-        } else {
-            showToast('您的浏览器不支持柯尔克孜语语音朗读', 'info');
+        try {
+            // 微软 Edge TTS WebSocket 直连（无需 API Key）
+            const ws = new WebSocket('wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4');
+            
+            const audioChunks = [];
+            
+            ws.onopen = () => {
+                // 发送语音配置
+                ws.send(`X-Timestamp:${new Date().toISOString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+                
+                // 发送 SSML 请求
+                const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ky-KG'><voice name='Microsoft Server Speech Text to Speech Voice (ky-KG, AigulNeural)'>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</voice></speak>`;
+                ws.send(`X-RequestId:${createUUID()}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n${ssml}`);
+            };
+            
+            ws.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    if (event.data.includes('Path:turn.end')) {
+                        ws.close();
+                    }
+                } else {
+                    audioChunks.push(event.data);
+                }
+            };
+            
+            ws.onerror = (err) => {
+                console.error('[WebSocket 错误]', err);
+                showToast('朗读连接失败', 'error');
+            };
+            
+            ws.onclose = () => {
+                if (audioChunks.length > 0) {
+                    const blob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.onended = () => URL.revokeObjectURL(url);
+                    audio.play().catch(() => showToast('音频播放失败', 'error'));
+                }
+            };
+            
+        } catch (err) {
+            console.error('[TTS 错误]', err);
+            showToast('柯尔克孜语朗读暂不可用', 'error');
         }
+    }
+    
+    // 生成 UUID
+    function createUUID() {
+        return 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
     }
 
     sourceSpeakBtn.addEventListener('click', () => {
