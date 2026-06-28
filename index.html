@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中柯智能翻译 | Chinese ↔ Kyrgyz AI Translator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 头部导航栏 -->
+        <header class="app-header">
+            <div class="header-logo">
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 8l6 6 6-6"/>
+                    <path d="M4 14h16"/>
+                </svg>
+                <h1>中柯智能翻译</h1>
+            </div>
+            <button id="settings-btn" class="icon-btn" title="配置 API 设置">
+                <!-- ⚙️ 齿轮图标 SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- 隐私与大模型说明提示 -->
+        <div class="privacy-tip">
+            <span class="info-icon">ℹ️</span>
+            <p>本程序为纯前端应用，不收集任何隐私。首次使用请点击右上角 <strong>⚙️ 设置</strong> 并配置您自己的大模型 API 密钥即可免费互译。</p>
+        </div>
+
+        <!-- 翻译主卡片区域 -->
+        <main class="translator-container">
+            <!-- 源语言卡片 -->
+            <div class="translate-card source-card">
+                <div class="card-header">
+                    <span id="source-lang-label" class="lang-label active">中文</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="source-text" placeholder="输入要翻译的文本..." autofocus></textarea>
+                    <button id="clear-text-btn" class="clear-btn" title="清空文本">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-footer">
+                    <div class="voice-controls">
+                        <button id="source-record-btn" class="control-btn mic-btn" title="点击录音">
+                            <span class="ripple-ring"></span>
+                            <span class="ripple-ring"></span>
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="22"></line>
+                            </svg>
+                            <span class="btn-text">🎤 点击录音</span>
+                        </button>
+                        <button id="source-speak-btn" class="control-btn speak-btn" title="朗读">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                            <span class="btn-text">🔊 朗读</span>
+                        </button>
+                    </div>
+                    <div class="char-counter"><span id="char-count">0</span> / 2000</div>
+                </div>
+            </div>
+
+            <!-- 切换语言连接区域 -->
+            <div class="swap-divider">
+                <button id="swap-lang-btn" class="swap-btn" title="切换翻译方向">
+                    <svg class="swap-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="17 1 21 5 17 9"></polyline>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                        <polyline points="7 23 3 19 7 15"></polyline>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                    </svg>
+                    <span class="swap-tooltip">⇄ 切换语言</span>
+                </button>
+            </div>
+
+            <!-- 目标语言卡片 -->
+            <div class="translate-card target-card">
+                <div class="card-header">
+                    <span id="target-lang-label" class="lang-label active">柯尔克孜语</span>
+                </div>
+                <div class="card-body">
+                    <textarea id="target-text" placeholder="翻译结果将显示在这里..." readonly></textarea>
+                </div>
+                <div class="card-footer">
+                    <div class="voice-controls">
+                        <button id="target-record-btn" class="control-btn mic-btn" title="点击录音">
+                            <span class="ripple-ring"></span>
+                            <span class="ripple-ring"></span>
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="22"></line>
+                            </svg>
+                            <span class="btn-text">🎤 点击录音</span>
+                        </button>
+                        <button id="target-speak-btn" class="control-btn speak-btn" title="朗读">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                            <span class="btn-text">🔊 朗读</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 立即翻译大按钮区域 -->
+        <div class="action-container">
+            <button id="translate-btn" class="btn-primary">
+                <span class="btn-inner">
+                    <svg class="spinner-icon hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="translate-btn-text">立即翻译</span>
+                </span>
+            </button>
+        </div>
+
+        <!-- 设置抽屉面板 (Settings Drawer) -->
+        <div id="settings-drawer" class="drawer">
+            <div id="drawer-overlay" class="drawer-overlay"></div>
+            <div class="drawer-content">
+                <div class="drawer-header">
+                    <h2>⚙️ API 配置设置</h2>
+                    <button id="close-drawer-btn" class="close-btn" title="关闭">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="drawer-body">
+                    <p class="settings-desc">请配置兼容 OpenAI 格式的大语言模型接口。以下信息仅保存在您本机的浏览器 LocalStorage 中，不会上传至任何第三方服务器。</p>
+                    
+                    <div class="form-group">
+                        <label for="setting-base-url">大模型 API 基础地址 (Base URL)</label>
+                        <input type="url" id="setting-base-url" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                        <small class="form-help">例如：https://api.openai.com/v1 或您的代理 API 地址</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="setting-api-key">大模型 API Key</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="setting-api-key" placeholder="sk-..." autocomplete="off">
+                            <button type="button" id="toggle-key-visibility" class="toggle-password-btn" title="显示/隐藏 Key">
+                                <svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="setting-model">自定义翻译大模型名称</label>
+                        <input type="text" id="setting-model" placeholder="gpt-4o" value="gpt-4o">
+                        <small class="form-help">可选常用模型：gpt-4o, gpt-4-turbo, gpt-3.5-turbo 等</small>
+                    </div>
+                </div>
+                <div class="drawer-footer">
+                    <button id="cancel-settings" class="btn-secondary">取消</button>
+                    <button id="save-settings" class="btn-primary">保存配置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面底部版权 -->
+        <footer class="app-footer">
+            <p>© 2026 中柯智能翻译. 基于大语言模型技术驱动. Designed for Netlify.</p>
+        </footer>
+    </div>
+
+    <!-- 自定义 Toast 提示容器 -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
