@@ -148,7 +148,7 @@
                     
                     <div class="form-group">
                         <label for="setting-base-url">大模型 API 基础地址 (Base URL)</label>
-                        <input type="url" id="setting-base-url" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                        <input type="url" id="setting-base-url" placeholder="https://api.deepseek.com/v1" value="https://api.deepseek.com/v1">
                         <small class="form-help">例如：https://api.openai.com/v1 或您的代理 API 地址</small>
                     </div>
 
@@ -167,7 +167,7 @@
 
                     <div class="form-group">
                         <label for="setting-model">自定义翻译大模型名称</label>
-                        <input type="text" id="setting-model" placeholder="gpt-4o" value="gpt-4o">
+                        <input type="text" id="setting-model" placeholder="deepseek-chat" value="deepseek-chat">
                         <small class="form-help">可选常用模型：gpt-4o, gpt-4-turbo, gpt-3.5-turbo 等</small>
                     </div>
                 </div>
@@ -187,6 +187,7 @@
     <!-- 自定义 Toast 提示容器 -->
     <div id="toast-container" class="toast-container"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/edge-tts-ts@1.0.6/dist/browser/edge-tts-ts.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

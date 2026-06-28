@@ -67,9 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LocalStorage 配置管理 ---
     function loadSettings() {
-        const baseUrl = localStorage.getItem('translator_base_url') || 'https://api.openai.com/v1';
+        const baseUrl = localStorage.getItem('translator_base_url') || 'https://api.deepseek.com/v1';
         const apiKey = localStorage.getItem('translator_api_key') || '';
-        const model = localStorage.getItem('translator_model') || 'gpt-4o';
+        const model = localStorage.getItem('translator_model') || 'deepseek-chat';
 
         settingBaseUrl.value = baseUrl;
         settingApiKey.value = apiKey;
@@ -149,9 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 读取本地 API 配置
-        const baseUrl = localStorage.getItem('translator_base_url') || 'https://api.openai.com/v1';
+        const baseUrl = localStorage.getItem('translator_base_url') || 'https://api.deepseek.com/v1';
         const apiKey = localStorage.getItem('translator_api_key') || '';
-        const model = localStorage.getItem('translator_model') || 'gpt-4o';
+        const model = localStorage.getItem('translator_model') || 'deepseek-chat';
 
         if (!apiKey) {
             showToast('请先配置大模型 API Key 密钥', 'error');
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sourceRecordBtn.addEventListener('click', () => toggleRecording('source'));
     targetRecordBtn.addEventListener('click', () => toggleRecording('target'));
 
-    // --- 文本朗读 (Web Speech API - SpeechSynthesis) ---
+    // --- 文本朗读 (Web Speech API + Edge TTS) ---
     function speakText(text, lang) {
         if (!text) {
             showToast('没有可供朗读的文本', 'error');
@@ -346,8 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // 如果浏览器正在朗读，先停止
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
-            showToast('已停止朗读');
-            return;
         }
 
         if (lang === 'zh') {
@@ -365,39 +363,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.speechSynthesis.speak(utterance);
         } else {
-            // 柯尔克孜语（Kyrgyz）朗读：原生浏览器不支持
-            showToast('提示：浏览器原生 TTS 引擎暂不支持柯尔克孜语（Kyrgyz）。', 'info');
-            
-            // 提示开发者如何对接 edge-tts-ts
-            console.log(`
-===================================================================
-【未来如何实现高质量的柯尔克孜语（Kyrgyz）朗读？】
-由于浏览器 Web Speech API 缺失柯语原生支持，推荐通过以下方式实现：
-
-1. 客户端通过 CDN / NPM 引入微软 Edge TTS 接口：
-   - 微软 Edge 内置了高品质的柯尔克孜语（ky-KG）女声 "ky-KG-NaziraNeural" 与男声 "ky-KG-SamatNeural"。
-   - 您可以使用开源的 "edge-tts" 二次封装接口（如：https://github.com/rany2/edge-tts）或在 Netlify 部署一个轻量级 edge-tts Serverless 函数。
-   
-2. 在 Netlify Functions (Netlify 函数) 中实现以下路由：
-   - 安装 "edge-tts" 或使用 Node.js 的 Microsoft Cognitive Services Speech SDK。
-   - 在前端通过 fetch('/.netlify/functions/tts?text=' + encodeURIComponent(text)) 请求得到音频文件。
-   - 前端接收到 MP3 二进制流后，使用 Audio Context 或 new Audio(audioURL) 播放。
-
-代码架构伪代码示例：
-async function playKyrgyzTTS(text) {
-    const response = await fetch('/.netlify/functions/kyrgyz-tts?text=' + encodeURIComponent(text));
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-    audio.play();
-}
-===================================================================
-            `);
-
-            // 弹窗提示开发者在控制台查看柯语高品质音频实现的详细方案
-            setTimeout(() => {
-                showToast('已在开发者工具 Console 控制台中输出“微软高品质柯尔克孜语（Edge TTS）朗读”的具体实现方案，欢迎查看！', 'success');
-            }, 1000);
+            // 柯尔克孜语朗读：使用 Edge TTS
+            if (typeof EdgeTTS !== 'undefined') {
+                const player = new EdgeTTS.EdgeTTSPlayer();
+                player.speak(text, 'ky-KG', 'Microsoft-AigulNeural').then(() => {
+                    console.log('[Edge TTS] 柯尔克孜语朗读完成');
+                }).catch(err => {
+                    console.error('[Edge TTS 错误]', err);
+                    showToast('朗读失败，请检查网络连接', 'error');
+                });
+                showToast('正在为您朗读柯尔克孜语...', 'success');
+            } else {
+                showToast('柯尔克孜语朗读引擎加载中，请稍后再试', 'info');
+            }
         }
     }
 
